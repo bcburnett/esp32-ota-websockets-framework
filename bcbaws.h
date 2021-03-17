@@ -23,7 +23,6 @@ State state = {0,0};
 
 // define functions
 String getJson(bool b);
-//String File_Upload();
 
 
 // web server variables

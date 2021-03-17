@@ -28,7 +28,7 @@ const char htmlCode[]PROGMEM = R"rawliteral(
 <body>
  
   <! Edit the pages your heading 2 >
-  <h2>ESP32 Multi Slider</h2>
+  <h2>ESP32 Multi Slider rev3</h2>
   
   <! Displays the value of slider1 >
   <p><span id="textSliderValue">0</span> &#37</p>
@@ -77,6 +77,8 @@ const char htmlCode[]PROGMEM = R"rawliteral(
         document.getElementById("pwmSlider").value = json.slider1;
         document.getElementById("pwmSlider1").value = json.slider2;
       }
+
+      if(json.reload) location.reload();
     }
 
     // on page load
@@ -135,7 +137,7 @@ const char htmlCode[]PROGMEM = R"rawliteral(
       if (data.substring(0, 4) == 'comp') {
         document.getElementById('percent').innerHTML = "completed";
         setTimeout(() => {
-          location.reload();
+          sendMessage("reload");
         }, 2000);
       }
       websocket.send(data);
@@ -144,7 +146,8 @@ const char htmlCode[]PROGMEM = R"rawliteral(
 
 </script>
 </body>
-</html>
+</html> 
+
 )rawliteral";
 
 // end of default web page
@@ -190,7 +193,7 @@ void deleteFile(fs::FS &fs, const char * path) {
 }
 
 // write the default index.htm to SPIFFS
-// TODO check if index exists and only update if it doesn't
+//  check if index exists and only update if it doesn't
 void checkForIndex(){
   if(SPIFFS.exists("/index.htm")) return; // 
   deleteFile(SPIFFS,"/index.htm");
