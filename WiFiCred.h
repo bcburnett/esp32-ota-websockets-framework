@@ -1,3 +1,5 @@
-// wifi connection credentials
-const char *ssid = "********";
-const char *password = "**********";
+
+//wifi connection credentials
+const char* ssid     = "Espnet";
+//const char* ssid     = "Frontier4848";
+const char* password = "*********";

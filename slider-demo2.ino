@@ -72,7 +72,7 @@ void setup() {
       type = "filesystem";
 
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
-    SPIFFS.end()
+    //SPIFFS.end();
     Serial.println("Start updating " + type);
   })
   .onEnd([]() {
@@ -115,12 +115,16 @@ void TaskRelay(void *pvParameters) { // handle websocket and oled displays
 
 
 void initWiFi() {
+  Serial.println("connecting to wifi");
   // connect to wifi
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    return;
+  Serial.println("connecting to wifi failed");
+  delay(500);
+  initWiFi();
   }
+  Serial.println("wifi connected");
   wifiavail = true;
 }
 

@@ -17,6 +17,7 @@ struct State {
   int slider1;
   int slider2;
   String filename;
+  bool reload;
 };
 State state = {0,0}; 
 
@@ -89,6 +90,7 @@ String getJson(bool b) {
   data["slider1"] = state.slider1;
   data["slider2"] = state.slider2;
   if(b)data["initial"]="true";
+  if(state.reload)data["reload"] = "true";
   String response;
   serializeJson(data, response);
   return response;
@@ -129,6 +131,13 @@ Serial.println(command);
     String message = command.substring(5);
     appendFile(SPIFFS, "/temp.txt", message.c_str());
   }
+
+  if(command == "reload"){
+  state.reload=true;
+  notifyClients();
+  state.reload = false;
+  }
+  
 
 }
 
