@@ -7,6 +7,7 @@ struct State {
   String filename;
   bool reload;
   String json;
+  bool ota;
 };
-State state = {0,0};
+State state = {0,0,"",false,"",false};
 #endif 

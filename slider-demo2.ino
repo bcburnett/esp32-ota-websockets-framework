@@ -74,7 +74,18 @@ void setup() {
       type = "filesystem";
 
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS
-    //SPIFFS.end();
+    SPIFFS.end();
+ // Disable client connections    
+    ws.enable(false);
+
+    // Advertise connected clients what's going on
+    ws.textAll("OTA Update Started");
+
+    // Close them
+    ws.closeAll();
+    state.ota = true;
+
+    
     Serial.println("Start updating " + type);
   })
   .onEnd([]() {
@@ -110,8 +121,8 @@ void loop() {
 void TaskRelay(void *pvParameters) { // handle websocket and oled displays
   (void)pvParameters;
   for (;;) {
-    notifyInitialClients(getJson(true)); // send state to the client as a json string
-    vTaskDelay(500);
+    if(!state.ota) {notifyInitialClients(getJson(true));} // send state to the client as a json string
+    vTaskDelay(1000);
   }
 }
 
