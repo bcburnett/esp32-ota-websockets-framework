@@ -6,20 +6,14 @@
 #include <ESPAsyncWebServer.h>
 #include "bcbsdcard.h"
 #include <SPIFFS.h>
+#include "State.h"
 
 // handles state and communication with the client
 
 
 void parseCommand(String command);
 
-//set initial state
-struct State { 
-  int slider1;
-  int slider2;
-  String filename;
-  bool reload;
-};
-State state = {0,0}; 
+
 
 // define functions
 String getJson(bool b);
@@ -30,9 +24,13 @@ AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 bool wifiavail = false;
 
-void notifyClients() { ws.textAll(getJson(false)); } // send non-slider updating data
+void notifyClients() {
+  ws.textAll(getJson(false));  // send non-slider updating data
+}
 
-void notifyInitialClients(const String msg) { ws.textAll(msg); } // send slider updating data
+void notifyInitialClients(const String msg) {
+  ws.textAll(msg);  // send slider updating data
+}
 
 void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) { // receive the comm from the client and convert it into a string
   AwsFrameInfo *info = (AwsFrameInfo *)arg;
@@ -48,18 +46,18 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) { // receive t
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
              AwsEventType type, void *arg, uint8_t *data, size_t len) {
   switch (type) {
-  case WS_EVT_CONNECT:
-    notifyInitialClients(getJson(true));
-    break;
-  case WS_EVT_DISCONNECT:
-    Serial.printf("WebSocket client #%u disconnected\n", client->id());
-    break;
-  case WS_EVT_DATA:
-    handleWebSocketMessage(arg, data, len);
-    break;
-  case WS_EVT_PONG:
-  case WS_EVT_ERROR:
-    break;
+    case WS_EVT_CONNECT:
+      notifyInitialClients(getJson(true));
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
   }
 }
 
@@ -73,7 +71,9 @@ void initWebSocket() {
 void initWebServer() {
   // Route for root / web page served from spiffs
   // TODO add routines for dynamically updating index.htm
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {request->send(SPIFFS, "/index.htm", "text/html");});
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send(SPIFFS, "/index.htm", "text/html");
+  });
   // start the web server
   server.begin();
 }
@@ -81,23 +81,43 @@ void initWebServer() {
 // convert state to json
 String getJson(bool b) {
   StaticJsonDocument<250> data;
-// struct mp3Status {
-// int slider1;
-// int slider2;
-// };
+  // struct mp3Status {
+  // int slider1;
+  // int slider2;
+  // };
 
   data["slider1"] = state.slider1;
   data["slider2"] = state.slider2;
-  if(b)data["initial"]="true";
-  if(state.reload)data["reload"] = "true";
+  if (b) {
+    data["initial"] = "true";
+  }
+  if (state.reload) {
+    data["reload"] = "true";
+    state.reload = false;
+  }
+
   String response;
   serializeJson(data, response);
+  state.json = response;
+  writeFile(SPIFFS, "/data.json", state.json.c_str());
   return response;
+}
+
+// convert json to state
+void setState() {
+  StaticJsonDocument<250> data;
+  // struct mp3Status {
+  // int slider1;
+  // int slider2;
+  // };
+  deserializeJson(data, state.json);
+  state.slider1 = data["slider1"];
+  state.slider2 = data["slider2"];
 }
 
 //parse the command coming from the client(s)
 void parseCommand(String command) {
-Serial.println(command);
+  Serial.println(command);
 
   if (command.substring(0, 2) == "s1") { // slider 1 value
     String val1 = command.substring(2);
@@ -105,7 +125,7 @@ Serial.println(command);
     state.slider1 = val2;
     notifyClients();
   }
-  
+
   if (command.substring(0, 2) == "s2") { // slider 2 value
     String val1 = command.substring(2);
     int val2 = atoi((char *)&val1);
@@ -131,12 +151,12 @@ Serial.println(command);
     appendFile(SPIFFS, "/temp.txt", message.c_str());
   }
 
-  if(command == "reload"){
-  state.reload=true;
-  notifyClients();
-  state.reload = false;
+  if (command == "reload") {
+    state.reload = true;
+    notifyClients();
+    state.reload = false;
   }
-  
+
 
 }
 

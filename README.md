@@ -6,6 +6,7 @@
  - provides real time bi-directional communication between the clients and the ESP-32
  - a new index.htm can be uploaded from the client interface, and once uploaded, all the clients will refresh to the new page.
  - programming can be updated using the arduino OTA interface.
+ - it will maintain state between reboots.
 
 # Files
 

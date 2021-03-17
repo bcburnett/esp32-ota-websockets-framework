@@ -2,14 +2,14 @@
 #include "bcbaws.h"
 #include "bcbsdcard.h"
 #include "time.h"
-#include "WiFiCred.h"
+#include "WiFiCred1.h"
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <ArduinoOTA.h>
 #include <ESPmDNS.h>
-#include <U8g2lib.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
+#include "State.h"
 
 #define ARDUINO_RUNNING_CORE 1
 
@@ -51,6 +51,8 @@ void setup() {
   initWebSocket();
   initSDCard();
   checkForIndex();
+  setState();
+  state.reload = true;
 
   xTaskCreatePinnedToCore(TaskRelay, "TaskRelay" // A name just for humans
                           ,

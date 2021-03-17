@@ -1,5 +1,7 @@
 #include "FS.h"
 #include "SPIFFS.h"
+#include "ArduinoJson.h"
+#include "State.h"
 
 #ifndef BCBSD
 #define BCBSD
@@ -155,7 +157,6 @@ const char htmlCode[]PROGMEM = R"rawliteral(
 // variables
 xSemaphoreHandle semFile = xSemaphoreCreateMutex(); // file operation lock
 #define FORMAT_SPIFFS_IF_FAILED true
-
 void initSDCard() {
   if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
     return;
@@ -177,6 +178,36 @@ void appendFile(fs::FS &fs, const char * path, const char * message) {
   }
 }
 
+void writeFile(fs::FS &fs, const char * path, const char * message) {
+
+  if (xSemaphoreTake(semFile, 500)) {
+    File file = fs.open(path, FILE_WRITE);
+
+    if (!file) {
+      return;
+    }
+    file.print(message);
+    file.close();
+
+    xSemaphoreGive(semFile);
+  }
+}
+String readFile(fs::FS &fs, const char * path){
+    Serial.printf("Reading file: %s\r\n", path);
+
+    File file = fs.open(path);
+    if(!file || file.isDirectory()){
+        Serial.println("- failed to open file for reading");
+        return "";
+    }
+    String result;
+    Serial.println("- read from file:");
+    while(file.available()){
+        result += String(char(file.read()));
+    }
+    file.close();
+    return result;
+}
 
 void renameFile(fs::FS &fs, const char * path1, const char * path2) {
   if (xSemaphoreTake(semFile, 500)) {
@@ -195,6 +226,10 @@ void deleteFile(fs::FS &fs, const char * path) {
 // write the default index.htm to SPIFFS
 //  check if index exists and only update if it doesn't
 void checkForIndex(){
+  if(SPIFFS.exists("/data.json")) {
+    state.json = readFile(SPIFFS, "/data.json");
+    Serial.println(state.json);
+  }
   if(SPIFFS.exists("/index.htm")) return; // 
   deleteFile(SPIFFS,"/index.htm");
   delay(500);
