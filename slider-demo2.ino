@@ -36,8 +36,22 @@ String printLocalHour() {
   return (String(asctime(&timeinfo)).substring(11, 16) + " ");
 }
 
+int getHour() {
+  time_t now = time(NULL);
+  struct tm *tm_struct = localtime(&now);
+  int hour = tm_struct->tm_hour;
+  return hour;
+}
+int getMinute() {
+  time_t now = time(NULL);
+  struct tm *tm_struct = localtime(&now);
+  int minute = tm_struct->tm_min;
+  return minute;
+}
+
 // define functions
 void TaskRelay(void *pvParameters); // maintains the websocket display
+void TaskAlarm(void *pvParameters);
 void initWiFi();
 void initTime();
 
@@ -55,6 +69,16 @@ void setup() {
   state.reload = true;
 
   xTaskCreatePinnedToCore(TaskRelay, "TaskRelay" // A name just for humans
+                          ,
+                          4096 // This stack size can be checked & adjusted by
+                          // reading the Stack Highwater
+                          ,
+                          NULL, 2 // Priority, with 3 (configMAX_PRIORITIES - 1)
+                          // being the highest, and 0 being the lowest.
+                          ,
+                          NULL, ARDUINO_RUNNING_CORE);
+
+    xTaskCreatePinnedToCore(TaskAlarm, "TaskAlarm" // A name just for humans
                           ,
                           4096 // This stack size can be checked & adjusted by
                           // reading the Stack Highwater
@@ -122,10 +146,23 @@ void TaskRelay(void *pvParameters) { // handle websocket and oled displays
   (void)pvParameters;
   for (;;) {
     if(!state.ota) {notifyInitialClients(getJson(true));} // send state to the client as a json string
-    vTaskDelay(1000);
+    vTaskDelay(5000);
   }
 }
 
+void TaskAlarm(void *pvParameters) { // handle websocket and oled displays
+  (void)pvParameters;
+  for (;;) {
+    if (state.alarmSet) {
+      if (getHour() == state.alarmHour) {
+        if (getMinute() == state.alarmMinute) {
+          soundAlarm();
+        }
+      }
+    }
+    vTaskDelay(15000);
+  }
+}
 
 void initWiFi() {
   Serial.println("connecting to wifi");
@@ -138,6 +175,7 @@ void initWiFi() {
   initWiFi();
   }
   Serial.println("wifi connected");
+  
   wifiavail = true;
 }
 
@@ -145,4 +183,15 @@ void initTime() {
   // set the clock from ntp server
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
   printLocalTime();
+}
+
+void soundAlarm() {
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
+  Serial.println("ALARMING");
 }

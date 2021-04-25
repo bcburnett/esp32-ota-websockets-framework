@@ -32,8 +32,10 @@ const char htmlCode[]PROGMEM = R"rawliteral(
   <! Edit the pages your heading 2 >
   <h2>ESP32 Multi Slider rev3</h2>
   
+   <h3><span id="time"></span></h3>
+  
   <! Displays the value of slider1 >
-  <p><span id="textSliderValue">0</span> &#37</p>
+  <p><span id="textSliderValue">0</span> </p>
   
   <! displays the range of the slider 0 - 100 in steps of 1 >
   <p><input type="range" oninput="sendMessage('s1'+this.value)" id="pwmSlider" min="0" max="100" value=0 step="1" class="slider"></p>
@@ -43,6 +45,15 @@ const char htmlCode[]PROGMEM = R"rawliteral(
   
   <! displays the range of the slider 0 - 100 in steps of 1 >
   <p><input type="range" oninput="sendMessage('s2'+this.value)" id="pwmSlider1" min="0" max="100" value=0 step="1" class="slider"></p>
+
+<h4>Alarm Time: <span id="alarmStatus">OFF</span></h4>
+    <hr />
+    <input type="time" id="alarm" name="alarm" min="00:00" max="23:59">
+    <br /><br />
+    <button id="set"
+      onclick="sendMessage(document.getElementById('alarm').value? 'alarm,'+document.getElementById('alarm').value : '')">set</button>
+    <button id="reset" onclick="sendMessage('alarm,-1:-1')">reset</button>
+    <br />
 
   <input type='file' name='upload' id='upload' value=''><span id="percent"></span>
 <script>
@@ -79,6 +90,8 @@ const char htmlCode[]PROGMEM = R"rawliteral(
         document.getElementById("pwmSlider").value = json.slider1;
         document.getElementById("pwmSlider1").value = json.slider2;
       }
+      
+      document.getElementById("alarmStatus").innerHTML = (json.hour == -1 ? "Not" : String(json.hour).padStart(2, '0')) + ':' + (json.minute == -1 ? "Set" : String(json.minute).padStart(2, '0'));
 
       if(json.reload) location.reload();
     }
@@ -145,11 +158,13 @@ const char htmlCode[]PROGMEM = R"rawliteral(
       websocket.send(data);
     }
 
-
+    function doTime() {
+      document.getElementById('time').innerHTML = new Date().toLocaleString();
+    }
+    setInterval(doTime, 1000);
 </script>
 </body>
 </html> 
-
 )rawliteral";
 
 // end of default web page
@@ -158,10 +173,42 @@ const char htmlCode[]PROGMEM = R"rawliteral(
 xSemaphoreHandle semFile = xSemaphoreCreateMutex(); // file operation lock
 #define FORMAT_SPIFFS_IF_FAILED true
 void initSDCard() {
-  if (!SPIFFS.begin(FORMAT_SPIFFS_IF_FAILED)) {
+  if (!SPIFFS.begin()) {
     return;
   }
 }
+
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    Serial.printf("Listing directory: %s\r\n", dirname);
+
+    File root = fs.open(dirname);
+    if(!root){
+        Serial.println("- failed to open directory");
+        return;
+    }
+    if(!root.isDirectory()){
+        Serial.println(" - not a directory");
+        return;
+    }
+
+    File file = root.openNextFile();
+    while(file){
+        if(file.isDirectory()){
+            Serial.print("  DIR : ");
+            Serial.println(file.name());
+            if(levels){
+                listDir(fs, file.name(), levels -1);
+            }
+        } else {
+            Serial.print("  FILE: ");
+            Serial.print(file.name());
+            Serial.print("\tSIZE: ");
+            Serial.println(file.size());
+        }
+        file = root.openNextFile();
+    }
+}
+
 
 void appendFile(fs::FS &fs, const char * path, const char * message) {
 
@@ -226,14 +273,14 @@ void deleteFile(fs::FS &fs, const char * path) {
 // write the default index.htm to SPIFFS
 //  check if index exists and only update if it doesn't
 void checkForIndex(){
+ 
   if(SPIFFS.exists("/data.json")) {
     state.json = readFile(SPIFFS, "/data.json");
     Serial.println(state.json);
   }
+  
   if(SPIFFS.exists("/index.htm")) return; // 
-  deleteFile(SPIFFS,"/index.htm");
-  delay(500);
-  File file = SPIFFS.open("/index.htm", FILE_APPEND);
+  File file = SPIFFS.open("/index.htm", FILE_WRITE);
     file.print(htmlCode);
     file.close();
     }

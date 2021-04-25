@@ -74,6 +74,10 @@ void initWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request) {
     request->send(SPIFFS, "/index.htm", "text/html");
   });
+
+  server.on("/settings", HTTP_GET, [](AsyncWebServerRequest * request) {
+    request->send(SPIFFS, "/settings.htm", "text/html");
+  });
   // start the web server
   server.begin();
 }
@@ -88,6 +92,9 @@ String getJson(bool b) {
 
   data["slider1"] = state.slider1;
   data["slider2"] = state.slider2;
+  data["hour"] = state.alarmHour;
+  data["minute"] = state.alarmMinute;
+  data["set"] = state.alarmSet;
   if (b) {
     data["initial"] = "true";
   }
@@ -133,7 +140,24 @@ void parseCommand(String command) {
     notifyClients();
   }
 
+
+
   // file upload handler
+  if (command.substring(0, 1) == "a") {
+    int lastCommaIndex = command.lastIndexOf(',');
+    String sentAlarm = command.substring(lastCommaIndex + 1);
+    int lastColonIndex = sentAlarm.lastIndexOf(':');
+    String sentHour = sentAlarm.substring(0, lastColonIndex);
+    state.alarmHour = (atoi((char *)&sentHour));
+    String sentMinute = sentAlarm.substring(lastColonIndex + 1);
+    state.alarmMinute = (atoi((char *)&sentMinute));
+    if (state.alarmHour == -1) {
+      state.alarmSet = false;
+    } else {
+      state.alarmSet = true;
+    }
+    notifyClients();
+  }
 
   if (command.substring(0, 4) == "upld") {
     state.filename = command.substring(5);
